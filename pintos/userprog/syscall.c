@@ -255,6 +255,7 @@ syscall_filesize (int fd) {
 
 static int
 syscall_read (int fd , void *buffer , unsigned size ) {
+	check_buffer(buffer, size);
 	if(fd == 0) {
 		int read_size = 0;
 
@@ -281,6 +282,7 @@ syscall_read (int fd , void *buffer , unsigned size ) {
 
 static int
 syscall_write (int fd, const void *buffer, unsigned size) {
+	check_buffer(buffer, size);
 	if(fd == 0) {
 		return -1;
 	}
