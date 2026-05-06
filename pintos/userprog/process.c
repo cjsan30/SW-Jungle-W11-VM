@@ -395,7 +395,12 @@ process_wait (tid_t child_tid) {
 void
 process_exit (void) {
 	struct thread *curr = thread_current ();
-
+	for (int fd = 2; fd < FD_MAX; fd++) {
+		if (curr->fd_table[fd] != NULL) {
+			file_close (curr->fd_table[fd]);
+			curr->fd_table[fd] = NULL;
+		}
+	}
 	if(curr->child_info){
 		curr->child_info->exited = true;
 		if (curr->child_info->parent != NULL) sema_up (&curr->child_info->parent->child_wait_sema);
