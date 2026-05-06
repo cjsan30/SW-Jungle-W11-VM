@@ -204,6 +204,7 @@ syscall_wait (tid_t pid) {
 
 static bool
 syscall_create (const char *file, unsigned initial_size) {
+    check_string(file);
     if (file == NULL) { /* NULL 포인터는 잘못된 사용자 접근으로 처리한다. */
         syscall_exit(-1);
     }
@@ -215,6 +216,7 @@ syscall_create (const char *file, unsigned initial_size) {
 
 static bool
 syscall_remove (const char *file) {
+    check_string(file);
     if (file == NULL) { /* NULL 포인터는 잘못된 사용자 접근으로 처리한다. */
         syscall_exit(-1);
     }
@@ -226,6 +228,7 @@ syscall_remove (const char *file) {
 
 static int
 syscall_open (const char *file) {
+    check_string(file);
     if (file == NULL) { /* NULL 포인터는 잘못된 사용자 접근으로 처리한다. */
         syscall_exit(-1);
     }
