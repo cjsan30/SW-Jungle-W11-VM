@@ -287,6 +287,15 @@ __do_fork (void *aux) {
 
 	process_init ();
 
+	for (int fd = 0; fd < FD_MAX; fd++) {
+		if (parent->fd_table[fd] != NULL) {
+			thread_current()->fd_table[fd] = file_duplicate (parent->fd_table[fd]);
+			if (thread_current()->fd_table[fd] == NULL){
+				goto error;
+			}
+		}
+	}
+
 	// 자식의 fork 반환값은 0
 	if_.R.rax = 0;
 
