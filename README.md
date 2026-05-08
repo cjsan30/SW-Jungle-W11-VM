@@ -1,131 +1,144 @@
-# 📘 Docker기반 Pintos 개발 환경 구축 가이드 
+# Week11 VM - KAIST Pintos
 
-이 문서는 **Windows**와 **macOS** 사용자가 Docker와 VSCode DevContainer 기능을 활용하여 Pintos OS 프로젝트를 빠르게 구축할 수 있도록 도와줍니다.
+이 저장소는 KAIST Pintos 기반 운영체제 과제 중 가상 메모리(VM) 단계 작업을 위한 프로젝트입니다.
 
-[**주의**]
-* ubunbu:22.04 버전은 충분한 테스트와 검증이 되지 않았습니다. 이 점을 주의해서 사용하시기 바랍니다.
+Docker와 VSCode DevContainer 설정은 포함되어 있지만, 이 README는 Docker 사용법이 아니라 현재 프로젝트의 구조, 빌드 방법, 테스트 방법을 기준으로 정리합니다.
 
-[**참고**] 
-* pintos 도커 환경은 `64비트 기반 X86-64` 기반의 `ubuntu:22.04` 버전을 사용합니다.
-   * kaist-pintos는 오리지널 pintos와 달리 64비트 환경을 지원합니다.
-   * 이번 도커 환경은 ubuntu 22.04를 지원하여 vscode의 최신 버전에서 원격 연결이 안되는 문제를 해결하였습니다.
-* pintos 도커 환경은 kaist-pintos에서 추천하는 qemu 에뮬레이터를 설치하고 사용합니다. 
-* pintos 도커 환경은 9주차부터 13주차까지 같은 환경을 사용합니다. 이 기간동안 별도의 개발 환경을 제공하지 않습니다.
-* 기존 도커 환경과 달리 `vscode`와 통합된 디버깅 환경(F5로 시작하는)을 제공하지 않습니다. 디버깅이 필요한 경우 `gdb`를 사용하세요. 
-* vscode에서 터미널을 오픈하면 자동으로 `source /workspaces/pintos_22.04_lab_docker/pintos/activate`를 실행합니다.
+## 프로젝트 개요
 
----
+Pintos는 교육용 운영체제 코드베이스입니다. 이 저장소에서는 `pintos/` 디렉터리 아래의 커널, 사용자 프로그램, 가상 메모리, 파일시스템 코드를 수정하고 테스트합니다.
 
-## 1. Docker란 무엇인가요?
+주요 목표는 다음과 같습니다.
 
-**Docker**는 애플리케이션을 어떤 컴퓨터에서든 **동일한 환경에서 실행**할 수 있게 도와주는 **가상화 플랫폼**입니다.  
+- 가상 메모리 서브시스템 구현 및 개선
+- 페이지 폴트 처리
+- Supplemental Page Table 관리
+- 프레임 할당과 교체
+- 스왑 및 파일 기반 페이지 처리
+- `mmap`, stack growth, copy-on-write 등 VM 관련 테스트 통과
 
-Docker는 다음 구성요소로 이루어져 있습니다:
+## 디렉터리 구조
 
-- **Docker Engine**: 컨테이너를 실행하는 핵심 서비스
-- **Docker Image**: 컨테이너 생성에 사용되는 템플릿 (레시피 📃)
-- **Docker Container**: 이미지를 기반으로 생성된 실제 실행 환경 (요리 🍜)
+```text
+.
+├─ .devcontainer/        # VSCode DevContainer 개발 환경 설정
+├─ .vscode/              # VSCode 실행/디버깅 보조 설정
+├─ pintos/               # Pintos 본체
+│  ├─ threads/           # 스레드, 스케줄러, 동기화, 인터럽트
+│  ├─ userprog/          # 사용자 프로세스, 시스템 콜, 예외 처리
+│  ├─ vm/                # 가상 메모리 구현 대상
+│  ├─ filesys/           # 파일시스템과 버퍼 캐시
+│  ├─ devices/           # 타이머, 디스크, 키보드 등 장치 코드
+│  ├─ include/           # 공용 헤더
+│  ├─ lib/               # 커널/유저 공용 라이브러리
+│  ├─ tests/             # Pintos 테스트 케이스
+│  └─ utils/             # pintos 실행 유틸리티
+├─ AGENTS.md             # AI 에이전트 작업 기준
+├─ CLAUDE.md             # Claude Code 작업 기준
+├─ PROJECT1_STUDY_PLAN.md
+└─ README.md
+```
 
-### ✅ AWS EC2와의 차이점
+## 개발 환경
 
-| 구분 | EC2 같은 VM | Docker 컨테이너 |
-|------|-------------|-----------------|
-| 실행 단위 | OS 포함 전체 | 애플리케이션 단위 |
-| 실행 속도 | 느림 (수십 초 이상) | 매우 빠름 (거의 즉시) |
-| 리소스 사용 | 무거움 | 가벼움 |
+권장 개발 환경은 저장소에 포함된 DevContainer입니다.
 
----
+- Ubuntu 22.04
+- x86-64
+- GCC / make / GDB
+- QEMU
+- Python 3
+- VSCode Dev Containers
 
-## 2. VSCode DevContainer란 무엇인가요?
+VSCode에서 프로젝트 루트를 연 뒤 `Dev Containers: Reopen in Container`를 실행하면 `.devcontainer/Dockerfile` 기준으로 개발 환경이 구성됩니다.
 
-**DevContainer**는 VSCode에서 Docker 컨테이너를 **개발 환경**처럼 사용할 수 있게 해주는 기능입니다.
-
-- 코드를 실행하거나 디버깅할 때 **컨테이너 내부 환경에서 동작**
-- 팀원 간 **환경 차이 없이 동일한 개발 환경 구성** 가능
-- `.devcontainer` 폴더에 정의된 설정을 VSCode가 읽어 자동 구성
-
----
-
-## 3. Docker Desktop 설치하기
-
-1. Docker 공식 사이트에서 설치 파일 다운로드:  
-   👉 [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
-
-2. 설치 후 Docker Desktop 실행  
-   - Windows: Docker 아이콘이 트레이에 떠야 함  
-   - macOS: 상단 메뉴바에 Docker 아이콘 확인
-
----
-
-## 4. 프로젝트 파일 다운로드 (히스토리 없이)
-
-터미널(CMD, PowerShell, zsh 등)에서 아래 명령어로 프로젝트 폴더만 내려받습니다:
+컨테이너 내부 셸에서는 다음 명령으로 Pintos 환경을 활성화합니다.
 
 ```bash
-git clone --depth=1 https://github.com/krafton-jungle/pintos_22.04_lab_docker.git 
+source pintos/activate
 ```
 
-- `--depth=1` 옵션은 git commit 히스토리를 생략하고 **최신 파일만 가져옵니다.**
+## 빌드
 
-### 📂 다운로드 후 폴더 구조 설명
-
-```
-pintos_22.04_lab_docker/
-├── .devcontainer/
-│   ├── devcontainer.json      # VSCode에서 컨테이너 환경 설정
-│   └── Dockerfile             # pintos 개발 환경 도커 이미지 정의
-│
-├── pintos
-│   ├── threads                # 9주차 threads 프로젝트 폴더
-│   ├── userprog               # 10-11주차 user program 프로젝트 폴더
-│   └── vm                     # 12-13주차 virtual memory 프로젝트 폴더
-│
-└── README.md                  # 현재 문서
-```
----
-
-## 5. VSCode에서 해당 프로젝트 폴더 열기
-
-1. VSCode를 실행
-2. `파일 → 폴더 열기`로 방금 클론한 `pintos_22.04_lab_docker` 폴더를 선택
-
----
-
-## 6. 개발 컨테이너: 컨테이너에서 열기
-
-1. VSCode에서 `Ctrl+Shift+P` (Windows/Linux) 또는 `Cmd+Shift+P` (macOS)를 누릅니다.
-2. 명령어 팔레트에서 `Dev Containers: Reopen in Container`를 선택합니다.
-3. 이후 컨테이너가 자동으로 실행되고 빌드됩니다. 처음 컨테이너를 열면 빌드하는 시간이 오래걸릴 수 있습니다. 빌드 후, 프로젝트가 **컨테이너 안에서 실행됨**.
-
----
-
-## 7. C 파일에 브레이크포인트 설정 후 디버깅 (F5)
-pintos 랩에서는 vscode기반의 디버깅을 지원하지 않습니다. 
-
----
-## 8. 새로운 Git 리포지토리에 Commit & Push 하기
-
-금주 프로젝트를 개인 Git 리포와 같은 다른 리포지토리에 업로드하려면, 기존 Git 연결을 제거하고 새롭게 초기화해야 합니다.
-
-### ✅ 완전히 새로운 Git 리포로 업로드하는 방법
-
-아래 명령어를 순서대로 실행하세요:
+수정 대상 모듈 디렉터리로 이동한 뒤 `make`를 실행합니다.
 
 ```bash
-rm -rf .git
-git init
-git remote add origin https://github.com/myusername/my-new-repo.git
-git add .
-git commit -m "Clean start"
-git push -u origin main
+source pintos/activate
+cd pintos/vm
+make
 ```
 
-### 📌 설명
+다른 모듈을 빌드할 때는 해당 디렉터리에서 실행합니다.
 
-- `rm -rf .git`: 기존 Git 기록과 연결을 완전히 삭제합니다.
-- `git init`: 현재 폴더를 새로운 Git 리포지토리로 초기화합니다.
-- `git remote add origin ...`: 새로운 리포지토리 주소를 origin으로 등록합니다.
-- `git add .` 및 `git commit`: 모든 파일을 커밋합니다.
-- `git push`: 새로운 리포에 최초 업로드(Push)합니다.
+```bash
+cd pintos/threads
+make
 
-이 과정을 거치면 기존 리포와의 연결은 완전히 제거되고, **새로운 독립적인 프로젝트로 관리**할 수 있습니다.
+cd pintos/userprog
+make
+
+cd pintos/filesys
+make
+```
+
+빌드 산출물을 정리하려면 다음을 사용합니다.
+
+```bash
+make clean
+```
+
+## 테스트
+
+VM 프로젝트 전체 테스트는 `pintos/vm`에서 실행합니다.
+
+```bash
+source pintos/activate
+cd pintos/vm
+make check
+```
+
+특정 테스트만 실행할 때는 `make check` 대신 Pintos 테스트 유틸리티를 사용할 수 있습니다.
+
+```bash
+cd pintos/vm
+pintos -- run <test-name>
+```
+
+예시:
+
+```bash
+pintos -- run lazy-anon
+pintos -- run mmap-read
+pintos -- run page-merge-seq
+```
+
+테스트 결과는 보통 각 모듈의 `build/` 하위에 생성됩니다. 빌드 결과, 디스크 이미지, 로그 등 생성 산출물은 특별한 이유가 없으면 커밋하지 않습니다.
+
+## 주요 작업 파일
+
+VM 작업에서 자주 확인하는 파일은 다음과 같습니다.
+
+- `pintos/vm/vm.c`: VM 초기화, 페이지 할당, 페이지 폴트 처리, SPT 관리
+- `pintos/vm/anon.c`: 익명 페이지와 스왑 처리
+- `pintos/vm/file.c`: 파일 기반 페이지와 mmap 처리
+- `pintos/vm/uninit.c`: 지연 로딩용 uninit page 처리
+- `pintos/include/vm/vm.h`: page, frame, SPT 관련 핵심 타입과 API
+- `pintos/include/vm/anon.h`: 익명 페이지 인터페이스
+- `pintos/include/vm/file.h`: 파일 페이지 인터페이스
+- `pintos/userprog/process.c`: 사용자 프로세스 로딩, 스택 구성, fork/exec 흐름
+- `pintos/userprog/syscall.c`: 시스템 콜 처리와 파일/메모리 관련 검증
+
+## 제출 아카이브
+
+제출용 아카이브가 필요한 경우 `pintos/` 디렉터리에서 생성합니다.
+
+```bash
+source pintos/activate
+cd pintos
+make TEAM=<team-number> archive
+```
+
+## 참고 문서
+
+- KAIST Pintos 공식 문서: https://casys-kaist.github.io/pintos-kaist/
+- 저장소 내 Pintos README: `pintos/README.md`
