@@ -56,7 +56,7 @@ process_create_initd (const char *file_name) {
 
 	/* Make a copy of FILE_NAME.
 	 * Otherwise there's a race between the caller and load(). */
-	// 단일 페이지를 얻어서 반환 
+
 	fn_copy = palloc_get_page (0);
 	name_copy = palloc_get_page(0);
 
@@ -97,15 +97,15 @@ process_create_initd (const char *file_name) {
 		free (child);
 		return TID_ERROR;
 	}
-	
+
 	list_push_back (&thread_current ()->children, &child->elem);
 	palloc_free_page(name_copy);
 	sema_down (&child->load_sema);
 	free (info);
 	if (!child->load_success) return TID_ERROR;
-	
+
 	return child->tid;
-	
+
 }
 
 /* A thread function that launches first user process. */
@@ -118,7 +118,7 @@ initd (void *initd_info) {
 	char *file_name = info->file_name;
 	thread_current ()->child_info = info->child_info;
 	process_init ();
-	
+
 	if (process_exec (file_name) < 0) thread_exit ();
 	NOT_REACHED ();
 }
@@ -144,38 +144,38 @@ process_fork (const char *name, struct intr_frame *if_) {
 	    return TID_ERROR;
 	}
 
-	// child_info 초기화
-	child->tid = TID_ERROR;				// 자식 tid 저장용
-	child->exit_status = -1;			// 자식 종료 상태 저장용
-	child->exited = false;				// 자식 종료 여부
-	child->waited = false;				// wait 중복 호출 방지용
-	child->load_success = false;		// fork 복제 성공 여부
-	sema_init (&child->load_sema, 0);	// fork 복제 완료 대기용
-	child->parent = thread_current ();	// 부모 스레드 저장
 
-	// fork_info 초기화 
-	memcpy (&fork_info->parent_if, if_, sizeof *if_);	//intr_frame 복제용
-	fork_info -> child_info = child;					//성공 실패 저장용
+	child->tid = TID_ERROR;
+	child->exit_status = -1;
+	child->exited = false;
+	child->waited = false;
+	child->load_success = false;
+	sema_init (&child->load_sema, 0);
+	child->parent = thread_current ();
 
-	// 자식 스레드 생성 
+
+	memcpy (&fork_info->parent_if, if_, sizeof *if_);
+	fork_info -> child_info = child;
+
+
 	child->tid = thread_create (name, PRI_DEFAULT, __do_fork, fork_info);
 
 	if (child->tid == TID_ERROR) {
-		
+
     	free(child);
 		free (fork_info);
 
 		return TID_ERROR;
 	}
 
-	// 자식 목록 등록 
+
 	list_push_back (&thread_current ()->children, &child->elem);
-	// 자식 복제 완료 대기 
+
 	sema_down (&child->load_sema);
 
-	// 자식 복제 실패 처리 
+
 	if (!child->load_success) {
-		
+
 		list_remove(&child->elem);
     	free(child);
 		free (fork_info);
@@ -183,7 +183,7 @@ process_fork (const char *name, struct intr_frame *if_) {
 		return TID_ERROR;
 	}
 
-	// 임시 fork 정보 해제 
+
 	free (fork_info);
 
 	return child->tid;
@@ -203,7 +203,7 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
 	if (is_kernel_vaddr (va)){
 		return true;
-	}    
+	}
 
 
 	/* 2. Resolve VA from the parent's page map level 4. */
@@ -241,39 +241,39 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
  *       this function. */
 static void
 __do_fork (void *aux) {
-	struct fork_info *fork_info = aux;						//process_fork에서 넘긴 fork_info
-	struct child_info *child_info = fork_info->child_info;	//이번 자식의 상태 기록표
-	struct thread *parent = child_info->parent;				//부모 thread
+	struct fork_info *fork_info = aux;
+	struct child_info *child_info = fork_info->child_info;
+	struct thread *parent = child_info->parent;
 	struct intr_frame if_;
 
 	thread_current() -> child_info = child_info;
 
-	// 부모의 유저 실행 상태 복사
-	// rip  = fork syscall이 끝난 뒤 돌아갈 유저 코드 위치
-	// rsp  = 부모의 유저 스택 위치
-	// rdi/rsi/rdx/... = syscall 당시 레지스터 값들
-	// rax  = syscall 번호 또는 반환값으로 쓸 자리
-	// cs/ss/eflags = 유저모드 복귀에 필요한 CPU 상태
-	// fork 이후 자식도 부모와 같은 유저 코드 위치에서 실행되어야 하므로,
-	// 부모의 intr_frame(rip, rsp, 일반 레지스터 등)을 자식용 if_에 복사한다.
+
+
+
+
+
+
+
+
 	memcpy (&if_, &fork_info -> parent_if, sizeof (struct intr_frame));
 
-	// 현재 실행 중인 자식 thread의 pml4 필드에
-	// 새로 만든 pml4를 넣는다
+
+
 	thread_current() -> pml4 = pml4_create();
 	if (thread_current() -> pml4 == NULL){
 		goto error;
 	}
 
-	// 이후 자식 pml4에 페이지를 매핑할 수 있도록
-	// CPU의 주소 변환 기준을 자식 pml4로 바꾼다.
+
+
 	process_activate (thread_current());
 #ifdef VM
-	supplemental_page_table_init (&current->spt);
-	if (!supplemental_page_table_copy (&current->spt, &parent->spt))
+	supplemental_page_table_init (&thread_current()->spt);
+	if (!supplemental_page_table_copy (&thread_current()->spt, &parent->spt))
 		goto error;
 #else
-	// 부모 주소 공간 복제
+
 	if (!pml4_for_each (parent->pml4, duplicate_pte, parent)){
 		goto error;
 	}
@@ -296,18 +296,18 @@ __do_fork (void *aux) {
 		}
 	}
 
-	// 자식의 fork 반환값은 0
+
 	if_.R.rax = 0;
 
-	// 부모에게 fork 복제 성공 알림
+
 	child_info->load_success = true;
 	sema_up (&child_info->load_sema);
 
-	// 자식은 fork 다음 줄로 유저모드 복귀
+
 	do_iret (&if_);
 
 error:
-	//에러가 나더라도 부모는 일어나야 됨
+
 	child_info->load_success = false;
     sema_up (&child_info->load_sema);
 	thread_exit ();
@@ -323,8 +323,8 @@ process_exec (void *f_name) {
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
 	 * it stores the execution information to the member. */
-	
-	 // 인터럽트(or System call) 발생 순간의 CPU 상태 스냅샷
+
+
 	 struct intr_frame _if;
 	_if.ds = _if.es = _if.ss = SEL_UDSEG;
 	_if.cs = SEL_UCSEG;
@@ -375,7 +375,7 @@ process_wait (tid_t child_tid) {
 			break;
 		}
 	}
-	
+
 	if (child == NULL) return -1;
 	if (child->waited) return -1;
 
@@ -441,13 +441,13 @@ process_cleanup (void) {
 void
 process_activate (struct thread *next) {
 	/* Activate thread's page tables. */
-	//CPU의 CR3 레지스터에 이 pml4를 넣어서 주소 변환 기준으로 삼게 함
+
 	pml4_activate (next->pml4);
 
 	/* Set thread's kernel stack for use in processing interrupts. */
-	//이후 커널 진입 시 사용할 커널 스택 정보를 현재 thread 기준으로 갱신
-	//다음 thread가 유저모드에서 커널모드로 들어올 때 사용할 커널 스택 꼭대기를 CPU에 알려주는 코드
-	//rsp0 값 바꿔줌
+
+
+
 	tss_update (next);
 }
 
@@ -477,12 +477,16 @@ struct ELF64_hdr {
 	uint16_t e_type;
 	uint16_t e_machine;
 	uint32_t e_version;
+
 	uint64_t e_entry;
+
 	uint64_t e_phoff;
 	uint64_t e_shoff;
 	uint32_t e_flags;
 	uint16_t e_ehsize;
+
 	uint16_t e_phentsize;
+
 	uint16_t e_phnum;
 	uint16_t e_shentsize;
 	uint16_t e_shnum;
@@ -490,13 +494,20 @@ struct ELF64_hdr {
 };
 
 struct ELF64_PHDR {
+
 	uint32_t p_type;
+
 	uint32_t p_flags;
+
 	uint64_t p_offset;
+
 	uint64_t p_vaddr;
 	uint64_t p_paddr;
+
 	uint64_t p_filesz;
+
 	uint64_t p_memsz;
+
 	uint64_t p_align;
 };
 
@@ -533,7 +544,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	if(file_name == NULL) goto done;
 	char *fn_copy_parse;
 
-	// 원본 보호를 위한 복사본 생성
+
 	fn_copy_parse = palloc_get_page (0);
 	if(fn_copy_parse == NULL) {
 		goto done;
@@ -541,13 +552,13 @@ load (const char *file_name, struct intr_frame *if_) {
 	strlcpy(fn_copy_parse, file_name, PGSIZE);
 
 	char *save_pt; //
-	char **argv[64] = {0}; // 앞서 pintos 기준이 4kb로 읽고, 넉넉하게 포인터배열 64개(512byte) + 나머지 문자열 크기
+	char **argv[64] = {0};
 	int argc = 0;
 
-	// 첫번째 토큰이 없다면
+
 	char *ftken;
 
-	// 
+	//
 	for(ftken = strtok_r(fn_copy_parse, " ", &save_pt);
 		ftken != NULL;
 		ftken = strtok_r(NULL, " ", &save_pt)) {
@@ -584,6 +595,7 @@ load (const char *file_name, struct intr_frame *if_) {
 
 		if (file_ofs < 0 || file_ofs > file_length (file))
 			goto done;
+
 		file_seek (file, file_ofs);
 
 		if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
@@ -636,7 +648,7 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* Start address. */
 	if_->rip = ehdr.e_entry;
-	
+
 	char *user_argv[64] = {0};
 
 	int stk_argc = argc;
@@ -665,13 +677,13 @@ load (const char *file_name, struct intr_frame *if_) {
 	for(int i=argc-1; i>=0; i--) {
 		if_->rsp -= sizeof(char*); // 8byte
 		*(char **)(if_->rsp) = user_argv[i];
-		// if_->rsp(유저스택주소)를 1byte char 형 포인터로 형변환
-		// char 포인터가 가리키는 메모리에 프로그램 인자 주소값 삽입
+
+
 	}
 	// push fake address
 	if_->rsp -= 8;
 	*(char **)if_->rsp = 0;
-	
+
 	if_->R.rdi = argc;
 	if_->R.rsi = if_->rsp + 8;
 
@@ -680,7 +692,7 @@ load (const char *file_name, struct intr_frame *if_) {
 done:
 	/* We arrive here whether the load is successful or not. */
 	file_close (file);
-	if(fn_copy_parse != NULL) palloc_free_page(fn_copy_parse); // argv에는 fn_copy_parse의 주소값이 들어가기에 스택에 올리고 나서 해제해야함
+	if(fn_copy_parse != NULL) palloc_free_page(fn_copy_parse);
 	return success;
 }
 
@@ -795,20 +807,20 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the USER_STACK */
 static bool
 setup_stack (struct intr_frame *if_) {
-	// 8비트 정수
+
 	uint8_t *kpage;
 	bool success = false;
 
-	// 페이지 할당
+
 	kpage = palloc_get_page (PAL_USER | PAL_ZERO);
 	if (kpage != NULL) {
-		
-		// 커널에서 가져온(kpage) 수정할 수 있는(true) 페이지를 첫번째 인자에 매핑
+
+
 		success = install_page (((uint8_t *) USER_STACK) - PGSIZE, kpage, true);
 		if (success)
-			// 인터럽트 프레임(if)에서 rsp(스택 포인터)를 USER_STACK으로 변경
+
 			if_->rsp = USER_STACK;
-			//// 프로그램 시작 시 사용할 스택의 시작위치 저장
+
 		else
 			palloc_free_page (kpage);
 	}
@@ -872,6 +884,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
+
 
 	while (read_bytes > 0 || zero_bytes > 0) {
 		/* Do calculate how to fill this page.

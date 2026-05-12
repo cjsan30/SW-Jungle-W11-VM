@@ -15,8 +15,8 @@
 
 #include "devices/input.h"
 #include "threads/init.h"
-#include "filesys/file.h"  
-#include "filesys/filesys.h" 
+#include "filesys/file.h"
+#include "filesys/filesys.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -137,7 +137,7 @@ syscall_handler (struct intr_frame *f) {
 		case SYS_SPAWN:
 			f->R.rax = syscall_spawn ((const char *) f->R.rdi);
 			break;
-		
+
 		default:
 			syscall_invalid ();
 			break;
@@ -146,32 +146,32 @@ syscall_handler (struct intr_frame *f) {
 
 static struct file *
 fd_to_file(int fd) {
-    if (fd < 2 || fd >= FD_MAX) { /* 각 syscall에서 따로 처리하도록 */
+    if (fd < 2 || fd >= FD_MAX) {
         return NULL;
     }
     return thread_current()->fd_table[fd];
 }
 
 static int
-fd_alloc(struct file *f) { /* f = 등록할 파일 포인터 (filesys_open이 반환한 것) */
+fd_alloc(struct file *f) {
     struct thread *current = thread_current();
-    for (int i = 2; i < FD_MAX; i++) { /* fd 2부터 탐색 (0, 1은 특수 fd) */
-        if (current->fd_table[i] == NULL) { /* 빈 슬롯 발견 */
-            current->fd_table[i] = f; /* 파일 포인터 등록 */
-            return i; /* 할당된 fd 번호 반환 */
+    for (int i = 2; i < FD_MAX; i++) {
+        if (current->fd_table[i] == NULL) {
+            current->fd_table[i] = f;
+            return i;
         }
     }
-    return -1; /* 빈 슬롯 없음 → 실패 */
+    return -1;
 }
 
 static void
 fd_free(int fd) {
-    struct file *f = fd_to_file(fd); /* fd → 파일 포인터 변환 */
-    if (f == NULL) { /* 잘못된 fd → 그냥 종료 */
+    struct file *f = fd_to_file(fd);
+    if (f == NULL) {
         return;
     }
-    file_close(f); /* 커널 자원 해제 */
-    thread_current()->fd_table[fd] = NULL; /* 슬롯 비우기 */
+    file_close(f);
+    thread_current()->fd_table[fd] = NULL;
 }
 
 static void
@@ -185,7 +185,7 @@ syscall_exit (int status) {
 static tid_t
 syscall_exec (const char *file) {
 	check_string(file);
-	char *fn_copy = palloc_get_page (0); 
+	char *fn_copy = palloc_get_page (0);
 	if (fn_copy == NULL)
 		return -1;
 
@@ -205,10 +205,10 @@ syscall_wait (tid_t pid) {
 static bool
 syscall_create (const char *file, unsigned initial_size) {
     check_string(file);
-    if (file == NULL) { /* NULL 포인터는 잘못된 사용자 접근으로 처리한다. */
+    if (file == NULL) {
         syscall_exit(-1);
     }
-    if (!is_user_vaddr(file)) { /* 커널 영역 주소 접근은 허용하지 않는다. */
+    if (!is_user_vaddr(file)) {
         syscall_exit(-1);
     }
     return filesys_create (file, initial_size);
@@ -217,31 +217,31 @@ syscall_create (const char *file, unsigned initial_size) {
 static bool
 syscall_remove (const char *file) {
     check_string(file);
-    if (file == NULL) { /* NULL 포인터는 잘못된 사용자 접근으로 처리한다. */
+    if (file == NULL) {
         syscall_exit(-1);
     }
-    if (!is_user_vaddr(file)) { /* 커널 영역 주소 접근은 허용하지 않는다. */
+    if (!is_user_vaddr(file)) {
         syscall_exit(-1);
     }
-    return filesys_remove(file); /* 파일 시스템에서 해당 파일을 삭제하고 결과를 반환한다. */
+    return filesys_remove(file);
 }
 
 static int
 syscall_open (const char *file) {
     check_string(file);
-    if (file == NULL) { /* NULL 포인터는 잘못된 사용자 접근으로 처리한다. */
+    if (file == NULL) {
         syscall_exit(-1);
     }
-    if (!is_user_vaddr(file)) { /* 커널 영역 주소 접근은 허용하지 않는다. */
+    if (!is_user_vaddr(file)) {
         syscall_exit(-1);
     }
-    struct file *f = filesys_open(file); /* 파일 시스템에서 파일을 연다. */
+    struct file *f = filesys_open(file);
     if (f == NULL) {
         return -1;
     }
-    int fd = fd_alloc(f); /* 열린 파일에 fd 번호를 할당한다. */
+    int fd = fd_alloc(f);
     if (fd == -1) {
-        file_close(f); /* fd 할당 실패 시 열린 파일을 닫아 자원을 해제한다. */
+        file_close(f);
         return -1;
     }
     return fd;
@@ -273,7 +273,7 @@ syscall_read (int fd , void *buffer , unsigned size ) {
 	}
 	else if (fd >= 2) {
 		struct file *get_fl = fd_to_file(fd);
-		
+
 		if(get_fl != NULL) {
 			int read_size = file_read(get_fl, buffer, size);
 

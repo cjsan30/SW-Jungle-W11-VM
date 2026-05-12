@@ -63,10 +63,8 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt, void *va) {
-	struct page *page = NULL;
+	struct page *page;
 	/* TODO: Fill this function. */
-	//변수로 받은 가상주소 포인터로 가상주소를 들고오기
-	//그 가상주소로 페이지 들고오기 : 페이지 정렬 
 	
 
 	return page;
@@ -74,8 +72,8 @@ spt_find_page (struct supplemental_page_table *spt, void *va) {
 
 /* Insert PAGE into spt with validation. */
 bool
-spt_insert_page (struct supplemental_page_table *spt UNUSED,
-		struct page *page UNUSED) {
+spt_insert_page (struct supplemental_page_table *spt,
+		struct page *page) {
 	int succ = false;
 	/* TODO: Fill this function. */
 
@@ -101,7 +99,7 @@ vm_get_victim (void) {
  * Return NULL on error.*/
 static struct frame *
 vm_evict_frame (void) {
-	struct frame *victim UNUSED = vm_get_victim ();
+	struct frame *victim = vm_get_victim ();
 	/* TODO: swap out the victim and return the evicted frame. */
 
 	return NULL;
@@ -123,12 +121,12 @@ vm_get_frame (void) {
 
 /* Growing the stack. */
 static void
-vm_stack_growth (void *addr UNUSED) {
+vm_stack_growth (void *addr) {
 }
 
 /* Handle the fault on write_protected page */
 static bool
-vm_handle_wp (struct page *page UNUSED) {
+vm_handle_wp (struct page *page) {
 }
 
 /* Return true on success */
@@ -181,20 +179,17 @@ typedef bool hash_less_func (const struct hash_elem *a, const struct hash_elem *
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt) {
-	// SPT 초기화
-	// hash_init(&spt->hash_table, );
-
 }
 
 /* Copy supplemental page table from src to dst */
 bool
-supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
-		struct supplemental_page_table *src UNUSED) {
+supplemental_page_table_copy (struct supplemental_page_table *dst,
+		struct supplemental_page_table *src) {
 }
 
 /* Free the resource hold by the supplemental page table */
 void
-supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
+supplemental_page_table_kill (struct supplemental_page_table *spt) {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
 }

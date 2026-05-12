@@ -39,5 +39,8 @@ pintos/.vscode/pintos-test-history.json
 *.MD
 !AGENTS.md
 !AGENTS.MD
+
+# 이슈 폴더
+/SW-AI-ISSUE-TEMPLATE
 pintos(vm)/
 

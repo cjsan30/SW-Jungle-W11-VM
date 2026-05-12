@@ -33,7 +33,7 @@ static struct list sleep_list;
 static bool
 sleep_less (const struct list_elem *a,
             const struct list_elem *b,
-            void *aux UNUSED/*Pintos list 비교 함수 규격 때문에 반드시 받아야 하는 인자다.*/) {
+            void *aux UNUSED) {
 	struct thread *ta = list_entry (a, struct thread, elem);
 	struct thread *tb = list_entry (b, struct thread, elem);
 
@@ -104,12 +104,12 @@ void
 timer_sleep (int64_t ticks) {
 	if (ticks <= 0)return;
 	ASSERT (intr_get_level () == INTR_ON);
-	struct thread *cur = thread_current ();//현재 실행중인 스레드 이름을 불러와 저장 이유는 다른 스레드,테스트에서도 이 함수를 호출하기때문
+	struct thread *cur = thread_current ();
 	enum intr_level old_level = intr_disable ();
 
 	cur->wakeup_tick = timer_ticks () + ticks;
 	list_insert_ordered (&sleep_list, &cur->elem, sleep_less, NULL);
-	thread_block ();//현재 스레드를 잠시 실행 불가능한 상태로 만들고 바로 scheduler로 넘기는 함수
+	thread_block ();
 
 	intr_set_level (old_level);
 }
@@ -143,11 +143,11 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
 	while (!list_empty (&sleep_list)) {
-		struct thread *t = list_entry (list_front (&sleep_list),struct thread, elem); //1. sleep_list 맨 앞 스레드를 t로 가져옴
+		struct thread *t = list_entry (list_front (&sleep_list),struct thread, elem);
 
-		if (t->wakeup_tick > ticks) //2. t->wakeup_tick이 현재 ticks보다 크면 → 아직 깨어날 시간이 아님
-			break;					//3. sleep_list는 wakeup_tick 순서로 정렬되어 있음
-									//4. 그래서 맨 앞이 아직 아니면 뒤쪽 스레드들도 전부 아직 아님
+		if (t->wakeup_tick > ticks)
+			break;
+
 		list_pop_front (&sleep_list);
 		thread_unblock (t);
 		if (t->priority > thread_current ()->priority)

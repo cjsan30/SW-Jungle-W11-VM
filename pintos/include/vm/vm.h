@@ -28,6 +28,7 @@ enum vm_type {
 #include "vm/uninit.h"
 #include "vm/anon.h"
 #include "vm/file.h"
+#include <hash.h>
 #ifdef EFILESYS
 #include "filesys/page_cache.h"
 #endif
@@ -87,7 +88,7 @@ struct page_operations {
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
 struct supplemental_page_table {
-	struct hash hash_table;
+	struct hash pages;
 };
 
 #include "threads/thread.h"
