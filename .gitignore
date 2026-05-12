@@ -35,8 +35,9 @@ core
 # 개인 문서 및 로컬 테스트 히스토리
 pintos/docs/
 pintos/.vscode/pintos-test-history.json
-# 공통 에이전트 파일
-*.md
+
 *.MD
 !AGENTS.md
 !AGENTS.MD
+pintos(vm)/
+

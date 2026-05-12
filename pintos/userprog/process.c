@@ -843,7 +843,7 @@ struct lazy_load_args{
 	off_t ofs;
 	size_t page_read_bytes;
 	size_t page_zero_bytes;
-}
+};
 
 static bool
 lazy_load_segment (struct page *page, void *aux) {
