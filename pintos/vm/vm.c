@@ -62,9 +62,12 @@ err:
 
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
-spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
+spt_find_page (struct supplemental_page_table *spt, void *va) {
 	struct page *page = NULL;
 	/* TODO: Fill this function. */
+	//변수로 받은 가상주소 포인터로 가상주소를 들고오기
+	//그 가상주소로 페이지 들고오기 : 페이지 정렬 
+	
 
 	return page;
 }
@@ -171,9 +174,16 @@ vm_do_claim_page (struct page *page) {
 	return swap_in (page, frame->kva);
 }
 
+typedef uint64_t hash_hash_func (const struct hash_elem *e, void *aux);
+typedef bool hash_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux);
+
+
 /* Initialize new supplemental page table */
 void
-supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
+supplemental_page_table_init (struct supplemental_page_table *spt) {
+	// SPT 초기화
+	// hash_init(&spt->hash_table, );
+
 }
 
 /* Copy supplemental page table from src to dst */
