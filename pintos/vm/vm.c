@@ -172,6 +172,10 @@ vm_do_claim_page (struct page *page) {
 	return swap_in (page, frame->kva);
 }
 
+typedef uint64_t hash_hash_func (const struct hash_elem *e, void *aux);
+typedef bool hash_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux);
+
+
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt) {
