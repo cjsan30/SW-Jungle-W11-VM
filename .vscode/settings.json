@@ -1,0 +1,7 @@
+{
+  "C_Cpp.default.defines": [
+    "USERPROG",
+    "FILESYS",
+    "VM"
+  ]
+}
