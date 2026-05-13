@@ -67,20 +67,25 @@ spt_find_page (struct supplemental_page_table *spt, void *va) {
 
 	temp_page.va = pg_round_down(va);
 
-	struct hash_elem *result = hash_find(&spt->pages, &temp_page.hash_elem);
+	struct hash_elem *find_result = hash_find(&spt->pages, &temp_page.hash_elem);
 
-	if(result == NULL)
+	if(find_result == NULL)
 		return NULL;
 
-	return hash_entry(result, struct page, hash_elem);
+	return hash_entry(find_result, struct page, hash_elem);
 }
 
 /* Insert PAGE into spt with validation. */
 bool
 spt_insert_page (struct supplemental_page_table *spt,
 		struct page *page) {
-	int succ = false;
-	/* TODO: Fill this function. */
+	bool succ = false;
+
+	struct hash_elem *insert_result = hash_insert(&spt->pages, &page->hash_elem);
+
+	if(insert_result == NULL){
+		succ = true;
+	}
 
 	return succ;
 }
