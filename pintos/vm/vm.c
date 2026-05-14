@@ -1,6 +1,7 @@
 /* vm.c: Generic interface for virtual memory objects. */
 
 #include "threads/malloc.h"
+#include "threads/vaddr.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/thread.h"
@@ -37,6 +38,23 @@ page_get_type (struct page *page) {
 static struct frame *vm_get_victim (void);
 static bool vm_do_claim_page (struct page *page);
 static struct frame *vm_evict_frame (void);
+
+static uint64_t
+page_hash (const struct hash_elem *e, void *aux) {
+	struct page *page = hash_entry (e, struct page, hash_elem);
+	return hash_bytes (&page->va, sizeof page->va);
+}
+
+static bool
+page_less (const struct hash_elem *a,
+		const struct hash_elem *b,
+		void *aux) {
+	struct page *page_a = hash_entry (a, struct page, hash_elem);
+	struct page *page_b = hash_entry (b, struct page, hash_elem);
+
+	return page_a->va < page_b->va;
+}
+
 
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
@@ -78,17 +96,12 @@ spt_find_page (struct supplemental_page_table *spt, void *va) {
 
 /* Insert PAGE into spt with validation. */
 bool
-spt_insert_page (struct supplemental_page_table *spt, struct page *page) {
-	bool succ = false;
+spt_insert_page (struct supplemental_page_table *spt,
+		struct page *page) {
 
-	struct hash_elem *insert_result = hash_insert(&spt->pages, &page->hash_elem);
-
-	if(insert_result == NULL){
-		succ = true;
-	}
-
-	return succ;
+	return hash_insert (&spt->pages, &page->hash_elem) == NULL;
 }
+
 
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
@@ -188,15 +201,9 @@ bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux);
 
 void
 supplemental_page_table_init (struct supplemental_page_table *spt) {
-	bool success = hash_init(&spt->pages, page_hash, page_less, NULL);
-	if(!success){
+	bool success = hash_init (&spt->pages, page_hash, page_less, NULL);
+	if(!success)
 		thread_exit();
-	}
-}
-
-uint64_t page_hash(const struct hash_elem *e, void *aux){
-	struct page *page = hash_entry(e, struct page, hash_elem);
-		return hash_bytes(&page->va, sizeof(page->va));
 }
 
 bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux){
