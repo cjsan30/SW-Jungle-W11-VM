@@ -895,7 +895,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
 		struct lazy_load_args *aux = malloc(sizeof *aux);
-		if(aux = NULL)
+		if(aux == NULL)
 			return false;
 		
 		aux->file = file_reopen(file);
