@@ -195,9 +195,6 @@ vm_do_claim_page (struct page *page) {
 	return swap_in (page, frame->kva);
 }
 
-/* Initialize new supplemental page table */
-uint64_t page_hash(const struct hash_elem *e, void *aux);
-bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux);
 
 void
 supplemental_page_table_init (struct supplemental_page_table *spt) {
@@ -205,18 +202,6 @@ supplemental_page_table_init (struct supplemental_page_table *spt) {
 	if(!success)
 		thread_exit();
 }
-
-bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux){
-	struct page *pa = hash_entry(a, struct page, hash_elem);
-	struct page *pb = hash_entry(b, struct page, hash_elem);
-
-	if(pa->va<pb->va)
-		return true;
-	else
-		return false;
-}
-
-
 /* Copy supplemental page table from src to dst */
 bool
 supplemental_page_table_copy (struct supplemental_page_table *dst,
