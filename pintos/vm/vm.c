@@ -82,16 +82,16 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt, void *va) {
-	struct page page;
-	struct hash_elem *e;
+	struct page temp_page;
 
-	page.va = pg_round_down (va);
-	e = hash_find (&spt->pages, &page.hash_elem);
+	temp_page.va = pg_round_down(va);
 
-	if (e == NULL)
+	struct hash_elem *find_result = hash_find(&spt->pages, &temp_page.hash_elem);
+
+	if(find_result == NULL)
 		return NULL;
 
-	return hash_entry (e, struct page, hash_elem);
+	return hash_entry(find_result, struct page, hash_elem);
 }
 
 /* Insert PAGE into spt with validation. */
@@ -195,17 +195,27 @@ vm_do_claim_page (struct page *page) {
 	return swap_in (page, frame->kva);
 }
 
-typedef uint64_t hash_hash_func (const struct hash_elem *e, void *aux);
-typedef bool hash_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux);
-
-
 /* Initialize new supplemental page table */
+uint64_t page_hash(const struct hash_elem *e, void *aux);
+bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux);
+
 void
 supplemental_page_table_init (struct supplemental_page_table *spt) {
 	bool success = hash_init (&spt->pages, page_hash, page_less, NULL);
 	if(!success)
 		thread_exit();
 }
+
+bool page_less(const struct hash_elem *a, const struct hash_elem *b, void *aux){
+	struct page *pa = hash_entry(a, struct page, hash_elem);
+	struct page *pb = hash_entry(b, struct page, hash_elem);
+
+	if(pa->va<pb->va)
+		return true;
+	else
+		return false;
+}
+
 
 /* Copy supplemental page table from src to dst */
 bool
