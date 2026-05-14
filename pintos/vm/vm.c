@@ -1,5 +1,6 @@
 /* vm.c: Generic interface for virtual memory objects. */
 
+#include "threads/thread.h"
 #include "threads/malloc.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
@@ -65,9 +66,12 @@ struct page *
 spt_find_page (struct supplemental_page_table *spt, void *va) {
 	struct page *page;
 	/* TODO: Fill this function. */
-	
+	page->va = pg_round_down(va);
 
-	return page;
+	struct hash_elem *ishash = hash_find(&spt->pages, &page->hash_elem);
+	if(ishash == NULL) return NULL;
+
+	return hash_entry(ishash, struct page, hash_elem);
 }
 
 /* Insert PAGE into spt with validation. */
@@ -76,6 +80,9 @@ spt_insert_page (struct supplemental_page_table *spt,
 		struct page *page) {
 	int succ = false;
 	/* TODO: Fill this function. */
+	struct hash_elem *isinsert = hash_insert(&spt->pages, &page->hash_elem);
+	
+	if(isinsert == NULL) succ = true;
 
 	return succ;
 }
@@ -172,9 +179,17 @@ vm_do_claim_page (struct page *page) {
 	return swap_in (page, frame->kva);
 }
 
+typedef uint64_t hash_hash_func (const struct hash_elem *e, void *aux);
+typedef bool hash_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux);
+
+
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt) {
+	bool succ = hash_init(&spt->pages, page_hash, page_less, NULL);
+	// if faile hash_init
+	if(!succ) thread_exit();
+
 }
 
 /* Copy supplemental page table from src to dst */
