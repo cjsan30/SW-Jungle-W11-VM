@@ -68,29 +68,32 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
 	if (spt_find_page (spt, upage) == NULL) {
-		struct page *temp = malloc(sizeof (struct page));
-		
-		if(temp == NULL) return false;
-		
+		struct page *page = malloc(sizeof(struct page));
+		if (page == NULL)
+			return false;
+		bool (*page_initializer)(struct page *, enum vm_type, void *);
 		switch (VM_TYPE(type)) {
-			case VM_ANON:
-				uninit_new(temp, upage, init, type, aux, anon_initializer);
+			case VM_ANON:{
+				page_initializer = anon_initializer;
 				break;
-			case VM_FILE:
-				uninit_new(temp, upage, init, type, aux, file_backed_initializer);
+			}
+			case VM_FILE:{
+				page_initializer = file_backed_initializer;
 				break;
-			default:
-				free(temp);
-				goto err;
+			}
+			default:{
+				free(page);
+				return false;
+			}
 		}
-
-		temp->writable = writable;
-
-    if(spt_insert_page(spt, temp)) return true;
-		else free(temp);
+		uninit_new(page, upage, init, type, aux, page_initializer);
+		page->writable = writable;
+		if(spt_insert_page(spt,page) == true)
+			return true;
+		else
+			free(page);
+			return false;
 	}
-err:
-	return false;
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
