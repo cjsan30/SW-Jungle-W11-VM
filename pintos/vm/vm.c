@@ -67,7 +67,6 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
-	/* Check wheter the upage is already occupied or not. */
 	if (spt_find_page (spt, upage) == NULL) {
 		struct page *page = malloc(sizeof(struct page));
 		if (page == NULL)
@@ -101,7 +100,7 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 struct page *
 spt_find_page (struct supplemental_page_table *spt, void *va) {
 	struct page temp_page;
- 
+
 	temp_page.va = pg_round_down(va);
 
 	struct hash_elem *find_result = hash_find(&spt->pages, &temp_page.hash_elem);
@@ -172,9 +171,9 @@ vm_handle_wp (struct page *page) {
 
 /* Return true on success */
 bool
-vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
-		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
+vm_try_handle_fault (struct intr_frame *f, void *addr,
+		bool user, bool write, bool not_present) {
+	struct supplemental_page_table *spt = &thread_current ()->spt;
 	struct page *page = NULL;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
@@ -192,7 +191,7 @@ vm_dealloc_page (struct page *page) {
 
 /* Claim the page that allocate on VA. */
 bool
-vm_claim_page (void *va UNUSED) {
+vm_claim_page (void *va) {
 	struct page *page = NULL;
 	/* TODO: Fill this function */
 
