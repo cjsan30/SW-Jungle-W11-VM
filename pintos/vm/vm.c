@@ -63,35 +63,53 @@ bool
 vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		vm_initializer *init, void *aux) {
 
-	ASSERT (VM_TYPE(type) != VM_UNINIT)
+	ASSERT (VM_TYPE(type) != VM_UNINIT);
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
 	/* Check wheter the upage is already occupied or not. */
 	if (spt_find_page (spt, upage) == NULL) {
-		/* TODO: Create the page, fetch the initialier according to the VM type,
-		 * TODO: and then create "uninit" page struct by calling uninit_new. You
-		 * TODO: should modify the field after calling the uninit_new. */
-
-		/* TODO: Insert the page into the spt. */
+		struct page *page = malloc(sizeof(struct page));
+		if (page == NULL)
+			return false;
+		bool (*page_initializer)(struct page *, enum vm_type, void *);
+		switch (VM_TYPE(type)) {
+			case VM_ANON:{
+				page_initializer = anon_initializer;
+				break;
+			}
+			case VM_FILE:{
+				page_initializer = file_backed_initializer;
+				break;
+			}
+			default:{
+				free(page);
+				return false;
+			}
+		}
+		uninit_new(page, upage, init, type, aux, page_initializer);
+		page->writable = writable;
+		if(spt_insert_page(spt,page) == true)
+			return true;
+		else
+			free(page);
+			return false;
 	}
-err:
-	return false;
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt, void *va) {
-	struct page page;
-	struct hash_elem *e;
+	struct page temp_page;
+ 
+	temp_page.va = pg_round_down(va);
 
-	page.va = pg_round_down (va);
-	e = hash_find (&spt->pages, &page.hash_elem);
+	struct hash_elem *find_result = hash_find(&spt->pages, &temp_page.hash_elem);
 
-	if (e == NULL)
+	if(find_result == NULL)
 		return NULL;
 
-	return hash_entry (e, struct page, hash_elem);
+	return hash_entry(find_result, struct page, hash_elem);
 }
 
 /* Insert PAGE into spt with validation. */
@@ -195,18 +213,13 @@ vm_do_claim_page (struct page *page) {
 	return swap_in (page, frame->kva);
 }
 
-typedef uint64_t hash_hash_func (const struct hash_elem *e, void *aux);
-typedef bool hash_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux);
 
-
-/* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt) {
 	bool success = hash_init (&spt->pages, page_hash, page_less, NULL);
 	if(!success)
 		thread_exit();
 }
-
 /* Copy supplemental page table from src to dst */
 bool
 supplemental_page_table_copy (struct supplemental_page_table *dst,
