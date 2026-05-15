@@ -63,7 +63,7 @@ bool
 vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		vm_initializer *init, void *aux) {
 
-	ASSERT (VM_TYPE(type) != VM_UNINIT)
+	ASSERT (VM_TYPE(type) != VM_UNINIT);
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
@@ -72,8 +72,26 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
+		struct page *temp = malloc(sizeof (struct page));
+		
+		if(temp == NULL) return false;
+		
+		switch (VM_TYPE(type)) {
+			case VM_ANON:
+				uninit_new(temp, upage, init, type, aux, anon_initializer);
+				break;
+			case VM_FILE:
+				uninit_new(temp, upage, init, type, aux, file_backed_initializer);
+				break;
+			default:
+				free(temp);
+				goto err;
+		}
 
+		temp->writable = writable;
 		/* TODO: Insert the page into the spt. */
+		if(spt_insert_page(spt, temp)) return true;
+		else free(temp);
 	}
 err:
 	return false;
@@ -154,9 +172,9 @@ vm_handle_wp (struct page *page) {
 
 /* Return true on success */
 bool
-vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
-		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
+vm_try_handle_fault (struct intr_frame *f, void *addr,
+		bool user, bool write, bool not_present) {
+	struct supplemental_page_table *spt = &thread_current ()->spt;
 	struct page *page = NULL;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
@@ -174,7 +192,7 @@ vm_dealloc_page (struct page *page) {
 
 /* Claim the page that allocate on VA. */
 bool
-vm_claim_page (void *va UNUSED) {
+vm_claim_page (void *va) {
 	struct page *page = NULL;
 	/* TODO: Fill this function */
 
