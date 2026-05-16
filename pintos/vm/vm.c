@@ -67,34 +67,32 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
-	/* Check wheter the upage is already occupied or not. */
-	if(spt_find_page(spt, upage) != NULL)
-		return false;
-
-	struct page *new_page = malloc(sizeof(struct page)); 
-	if(new_page == NULL)
-		return false;
-
-	if(VM_TYPE(type) == VM_ANON){
-		uninit_new(new_page, upage, init, type, aux, anon_initializer);
-	}
-	else if (VM_TYPE(type) == VM_FILE){
-		uninit_new(new_page, upage, init, type, aux, file_backed_initializer);
-	} 
-	else {
-		free(new_page);
-		return false;
-	}
-
-	new_page->writable = writable;
-
-	bool insert_result = spt_insert_page(spt, new_page);
-
-	if(insert_result)
-		return true;
-	else {
-		free(new_page);
-		return false;
+	if (spt_find_page (spt, upage) == NULL) {
+		struct page *page = malloc(sizeof(struct page));
+		if (page == NULL)
+			return false;
+		bool (*page_initializer)(struct page *, enum vm_type, void *);
+		switch (VM_TYPE(type)) {
+			case VM_ANON:{
+				page_initializer = anon_initializer;
+				break;
+			}
+			case VM_FILE:{
+				page_initializer = file_backed_initializer;
+				break;
+			}
+			default:{
+				free(page);
+				return false;
+			}
+		}
+		uninit_new(page, upage, init, type, aux, page_initializer);
+		page->writable = writable;
+		if(spt_insert_page(spt,page) == true)
+			return true;
+		else
+			free(page);
+			return false;
 	}
 }
 
@@ -173,9 +171,9 @@ vm_handle_wp (struct page *page) {
 
 /* Return true on success */
 bool
-vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
-		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
+vm_try_handle_fault (struct intr_frame *f, void *addr,
+		bool user, bool write, bool not_present) {
+	struct supplemental_page_table *spt = &thread_current ()->spt;
 	struct page *page = NULL;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
@@ -193,7 +191,7 @@ vm_dealloc_page (struct page *page) {
 
 /* Claim the page that allocate on VA. */
 bool
-vm_claim_page (void *va UNUSED) {
+vm_claim_page (void *va) {
 	struct page *page = NULL;
 	/* TODO: Fill this function */
 
