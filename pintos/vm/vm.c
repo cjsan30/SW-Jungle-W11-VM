@@ -186,6 +186,8 @@ vm_dealloc_page (struct page *page) {
 	free (page);
 }
 
+// spt에 등록만 되어있던 가상페이지를 물리 프레임에 연결해서 사용가능하게 만드는 함수
+// == frame 사용해야함
 /* Claim the page that allocate on VA. */
 bool
 vm_claim_page (void *va) {
