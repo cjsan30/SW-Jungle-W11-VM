@@ -930,10 +930,18 @@ setup_stack (struct intr_frame *if_) {
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
 
-	/* TODO: Map the stack on stack_bottom and claim the page immediately.
-	 * TODO: If success, set the rsp accordingly.
-	 * TODO: You should mark the page is stack. */
-	/* TODO: Your code goes here */
+	// 1. stack_bottom에 vm_alloc_page 매크로 사용해서 페이지 할당
+	// 1-1. 페이지 할당 실패하면 false 반환
+	bool alloc_result = vm_alloc_page(VM_ANON, stack_bottom, true);
+	if(alloc_result == false)
+		return false;
+
+	// 2. 할당된 페이지를 프레임과 연결
+	// 2-1. 프레임 연결에 실패하면 fasle 반환
+	vm_claim_page
+
+	
+	&if_->rsp = USER_STACK;
 
 	return success;
 }

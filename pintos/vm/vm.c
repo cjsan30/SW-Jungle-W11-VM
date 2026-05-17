@@ -211,21 +211,34 @@ vm_claim_page (void *va) {
 	return vm_do_claim_page (page);
 }
 
+static void
+vm_release_frame(struct page *page, struct frame *frame){
+	frame->page = NULL;
+	page->frame = NULL;
+	palloc_free_page(frame->kva);
+	free(frame);
+}
+
 /* Claim the PAGE and set up the mmu. */
 static bool
 vm_do_claim_page (struct page *page) {
 	struct frame *frame = vm_get_frame ();
 
-	/* Set links */
 	frame->page = page;
 	page->frame = frame;
 
-	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-	// 1. frame->kva를 페이지 테이블에 등록
-
-	// 2. pml4_set_page
-
-	return swap_in (page, frame->kva);
+	bool is_in_spt = pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable);
+	if (is_in_spt == false){
+		vm_release_frame(page, frame);
+		return false;
+	}
+    bool success = swap_in (page, frame->kva);
+	if (success == false){
+		pml4_clear_page(thread_current()->pml4, page->va);
+		vm_release_frame(page, frame);
+		return false;
+	}
+	return true;
 }
 
 
