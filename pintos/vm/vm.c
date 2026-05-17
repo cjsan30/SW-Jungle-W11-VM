@@ -152,7 +152,20 @@ vm_evict_frame (void) {
 static struct frame *
 vm_get_frame (void) {
 	struct frame *frame = NULL;
-	/* TODO: Fill this function. */
+
+	frame = malloc(sizeof(struct frame));
+	if (frame == NULL) {
+		PANIC("todo");
+	}
+
+	void *kva = palloc_get_page(PAL_USER);
+	if(kva == NULL){
+		free(frame);
+		PANIC("vm_get_frame : palloc_get_page failed");
+	}	
+
+	frame->kva = kva;
+	frame->page = NULL;
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
@@ -208,6 +221,9 @@ vm_do_claim_page (struct page *page) {
 	page->frame = frame;
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
+	// 1. frame->kva를 페이지 테이블에 등록
+
+	// 2. pml4_set_page
 
 	return swap_in (page, frame->kva);
 }
