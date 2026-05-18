@@ -55,7 +55,6 @@ page_less (const struct hash_elem *a,
 	return page_a->va < page_b->va;
 }
 
-
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
  * `vm_alloc_page`. */
@@ -206,7 +205,12 @@ vm_dealloc_page (struct page *page) {
 bool
 vm_claim_page (void *va) {
 	struct page *page = NULL;
-	/* TODO: Fill this function */
+	struct thread *thread = thread_current();
+
+	page = spt_find_page(&thread->spt, va);
+
+	if(page == NULL)
+		return false;
 
 	return vm_do_claim_page (page);
 }
