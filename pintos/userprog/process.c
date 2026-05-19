@@ -665,11 +665,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	while(if_->rsp % 8 != 0) {
 		if_->rsp--;
 	}
-	// if (((unsigned long long) if_->rsp & 7) != 0) {
-	// 	size_t padding = (size_t) if_-> rsp % 8;
-	// 	if_->rsp -= padding;
-	// 	memset(*(char **) if_->rsp, 0, padding);
-	// }
+
 	if_->rsp -= 8;
 	*(char **)if_->rsp = NULL;
 
@@ -859,25 +855,23 @@ struct lazy_load_args{
 
 static bool
 lazy_load_segment (struct page *page, void *aux) {
-	struct lazy_load_args *lazy_aux = aux;
-	void *kva = page->frame->kva;
-	off_t success_file_read;
+	struct lazy_load_args *llaux = aux;
+	void* buf = page->frame->kva;
 
-	file_seek(lazy_aux->file, lazy_aux->ofs);
-
-	success_file_read = file_read(lazy_aux->file, kva, lazy_aux->page_read_bytes);
-
-	if(success_file_read != (off_t)lazy_aux->page_read_bytes){
-		file_close(lazy_aux->file);
-		free(lazy_aux);
+	file_seek(llaux->file, llaux->ofs);
+	
+	int read_byte = file_read(llaux->file, buf, llaux->page_read_bytes);
+	if(read_byte != llaux->page_read_bytes) 
+	{
+		file_close(llaux->file);
+		free(llaux);
 		return false;
 	}
-	
-	memset((uint8_t *)kva + lazy_aux->page_read_bytes, 0, lazy_aux->page_zero_bytes);
-	file_close(lazy_aux->file);
-	free(lazy_aux);
-	
+	memset((uint8_t *)buf + llaux->page_read_bytes , 0 , llaux->page_zero_bytes);
+	file_close(llaux->file);
+	free(llaux);
 	return true;
+
 
 }
 

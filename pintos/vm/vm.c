@@ -2,10 +2,12 @@
 
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
+#include "threads/mmu.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/thread.h"
 #include "threads/mmu.h"
+
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -90,10 +92,12 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		page->writable = writable;
 		if(spt_insert_page(spt,page) == true)
 			return true;
-		else
+		else {
 			free(page);
 			return false;
+		}
 	}
+	return false;
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
@@ -123,7 +127,6 @@ spt_insert_page (struct supplemental_page_table *spt,
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
 	vm_dealloc_page (page);
-	return true;
 }
 
 /* Get the struct frame, that will be evicted. */
@@ -151,20 +154,16 @@ vm_evict_frame (void) {
  * space.*/
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = NULL;
+	struct frame *frame = malloc(sizeof *frame);
 
-	frame = malloc(sizeof(struct frame));
-	if (frame == NULL) {
-		PANIC("todo");
-	}
-
-	void *kva = palloc_get_page(PAL_USER|PAL_ZERO);
-	if(kva == NULL){
+	if(frame == NULL) return NULL;
+	frame->kva = palloc_get_page(PAL_USER | PAL_ZERO);
+	
+	if(frame->kva == NULL) {
 		free(frame);
-		PANIC("vm_get_frame : palloc_get_page failed");
-	}	
-
-	frame->kva = kva;
+		return NULL;
+	}
+	/* TODO: Fill this function. */
 	frame->page = NULL;
 
 	ASSERT (frame != NULL);
@@ -189,23 +188,16 @@ vm_try_handle_fault (struct intr_frame *f, void *addr,
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 	struct page *page = NULL;
 	
-	if(addr == NULL)
-		return false;
+	if(addr == NULL || is_kernel_vaddr(addr)) return false;
 
-	if(!is_user_vaddr(addr))
-		return false;
+	if(!not_present) return false;
 
-	if(!not_present)
-		return false;
-	
 	page = spt_find_page(spt, addr);
 
-	if (page == NULL)
-		return false;		
+	if(page == NULL) return false;
 
-	if(write && !page->writable)
-		return false;
-
+	if(write && !page->writable) return false;
+	
 	return vm_do_claim_page (page);
 }
 
