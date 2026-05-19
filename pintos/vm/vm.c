@@ -5,6 +5,7 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/thread.h"
+#include "threads/mmu.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -157,7 +158,7 @@ vm_get_frame (void) {
 		PANIC("todo");
 	}
 
-	void *kva = palloc_get_page(PAL_USER);
+	void *kva = palloc_get_page(PAL_USER|PAL_ZERO);
 	if(kva == NULL){
 		free(frame);
 		PANIC("vm_get_frame : palloc_get_page failed");
@@ -187,8 +188,23 @@ vm_try_handle_fault (struct intr_frame *f, void *addr,
 		bool user, bool write, bool not_present) {
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 	struct page *page = NULL;
-	/* TODO: Validate the fault */
-	/* TODO: Your code goes here */
+	
+	if(addr == NULL)
+		return false;
+
+	if(!is_user_vaddr(addr))
+		return false;
+
+	if(!not_present)
+		return false;
+	
+	page = spt_find_page(spt, addr);
+
+	if (page == NULL)
+		return false;		
+
+	if(write && !page->writable)
+		return false;
 
 	return vm_do_claim_page (page);
 }
