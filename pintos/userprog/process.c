@@ -938,14 +938,18 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a PAGE of stack at the USER_STACK. Return true on success. */
 static bool
 setup_stack (struct intr_frame *if_) {
-	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
 
-	success = vm_alloc_page(VM_ANON | VM_MARKER_0, stack_bottom, true);
-	if(success)	success = vm_claim_page(stack_bottom);
+	bool alloc_result = vm_alloc_page(VM_ANON | VM_MARKER_0, stack_bottom, true);
+	if(alloc_result == false)
+		return false;
 
-	if(success) if_->rsp = USER_STACK;
+	bool claim_result = vm_claim_page(stack_bottom);
+	if(claim_result == false)
+		return false;
+	
+	if_->rsp = USER_STACK;
 
-	return success;
+	return true;
 }
 #endif /* VM */

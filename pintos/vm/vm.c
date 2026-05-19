@@ -6,6 +6,7 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/thread.h"
+#include "threads/mmu.h"
 
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
@@ -56,7 +57,6 @@ page_less (const struct hash_elem *a,
 
 	return page_a->va < page_b->va;
 }
-
 
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
@@ -213,10 +213,22 @@ vm_dealloc_page (struct page *page) {
 bool
 vm_claim_page (void *va) {
 	struct page *page = NULL;
-	page = spt_find_page(&thread_current()->spt,va);
-	if (page == NULL)
+	struct thread *thread = thread_current();
+
+	page = spt_find_page(&thread->spt, va);
+
+	if(page == NULL)
 		return false;
+
 	return vm_do_claim_page (page);
+}
+
+static void
+vm_release_frame(struct page *page, struct frame *frame){
+	frame->page = NULL;
+	page->frame = NULL;
+	palloc_free_page(frame->kva);
+	free(frame);
 }
 
 /* Claim the PAGE and set up the mmu. */
@@ -224,14 +236,21 @@ static bool
 vm_do_claim_page (struct page *page) {
 	struct frame *frame = vm_get_frame ();
 
-	if(frame == NULL) return false;
-	/* Set links */
-	frame->page = page; 
+	frame->page = page;
 	page->frame = frame;
-	if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable))
-			return false;
 
-	return swap_in (page, frame->kva);
+	bool is_in_spt = pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable);
+	if (is_in_spt == false){
+		vm_release_frame(page, frame);
+		return false;
+	}
+    bool success = swap_in (page, frame->kva);
+	if (success == false){
+		pml4_clear_page(thread_current()->pml4, page->va);
+		vm_release_frame(page, frame);
+		return false;
+	}
+	return true;
 }
 
 
