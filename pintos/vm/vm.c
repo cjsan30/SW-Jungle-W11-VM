@@ -7,6 +7,7 @@
 #include "vm/inspect.h"
 #include "threads/thread.h"
 
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void
@@ -91,10 +92,12 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		page->writable = writable;
 		if(spt_insert_page(spt,page) == true)
 			return true;
-		else
+		else {
 			free(page);
 			return false;
+		}
 	}
+	return false;
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
@@ -210,12 +213,9 @@ vm_dealloc_page (struct page *page) {
 bool
 vm_claim_page (void *va) {
 	struct page *page = NULL;
-	struct supplemental_page_table *spt = &thread_current ()->spt;
-	
-	page = spt_find_page(spt, va);
-
-	if(page == NULL) return false;
-
+	page = spt_find_page(&thread_current()->spt,va);
+	if (page == NULL)
+		return false;
 	return vm_do_claim_page (page);
 }
 
@@ -228,9 +228,8 @@ vm_do_claim_page (struct page *page) {
 	/* Set links */
 	frame->page = page; 
 	page->frame = frame;
-
-	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-	if(!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable)) return false; 
+	if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable))
+			return false;
 
 	return swap_in (page, frame->kva);
 }
