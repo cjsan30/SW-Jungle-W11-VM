@@ -665,11 +665,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	while(if_->rsp % 8 != 0) {
 		if_->rsp--;
 	}
-	// if (((unsigned long long) if_->rsp & 7) != 0) {
-	// 	size_t padding = (size_t) if_-> rsp % 8;
-	// 	if_->rsp -= padding;
-	// 	memset(*(char **) if_->rsp, 0, padding);
-	// }
+
 	if_->rsp -= 8;
 	*(char **)if_->rsp = NULL;
 
@@ -929,12 +925,7 @@ static bool
 setup_stack (struct intr_frame *if_) {
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
-	// 실제 매핑할 4kb 페이지만큼 내린 시작점 주소
 
-	/* TODO: Map the stack on stack_bottom and claim the page immediately.
-	 * TODO: If success, set the rsp accordingly.
-	 * TODO: You should mark the page is stack. */
-	/* TODO: Your code goes here */
 	success = vm_alloc_page(VM_ANON | VM_MARKER_0, stack_bottom, true);
 	if(success)	success = vm_claim_page(stack_bottom);
 

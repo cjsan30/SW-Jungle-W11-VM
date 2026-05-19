@@ -2,6 +2,7 @@
 
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
+#include "threads/mmu.c"
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/thread.h"
@@ -148,8 +149,18 @@ vm_evict_frame (void) {
  * space.*/
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = NULL;
+	struct frame *frame = malloc(sizeof (struct *frame));
+
+	if(frame == NULL) return NULL;
+	// return 
+	frame->kva = palloc_get_page(PAL_USER | PAL_ZERO);
+	
+	if(frame->kva == NULL) {
+		free(frame);
+		return NULL;
+	}
 	/* TODO: Fill this function. */
+	frame->page = NULL;
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
@@ -172,9 +183,16 @@ vm_try_handle_fault (struct intr_frame *f, void *addr,
 		bool user, bool write, bool not_present) {
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 	struct page *page = NULL;
-	/* TODO: Validate the fault */
-	/* TODO: Your code goes here */
+	
+	if(addr == NULL || is_kernel_vaddr(addr)) return false;
 
+	if(!not_present) return false;
+
+	if(spt_find_page != NULL)
+		page = spt_find_page(spt, addr);
+
+	if(write && !page->writable) return false;
+	
 	return vm_do_claim_page (page);
 }
 
@@ -186,13 +204,15 @@ vm_dealloc_page (struct page *page) {
 	free (page);
 }
 
-// spt에 등록만 되어있던 가상페이지를 물리 프레임에 연결해서 사용가능하게 만드는 함수
-// == frame 사용해야함
 /* Claim the page that allocate on VA. */
 bool
 vm_claim_page (void *va) {
 	struct page *page = NULL;
-	/* TODO: Fill this function */
+	struct supplemental_page_table *spt = &thread_current ()->spt;
+	
+	page = spt_find_page(spt, va);
+
+	if(page == NULL) return false;
 
 	return vm_do_claim_page (page);
 }
@@ -202,11 +222,13 @@ static bool
 vm_do_claim_page (struct page *page) {
 	struct frame *frame = vm_get_frame ();
 
+	if(frame == NULL) return false;
 	/* Set links */
-	frame->page = page;
+	frame->page = page; 
 	page->frame = frame;
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
+	if(!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable)) return false; 
 
 	return swap_in (page, frame->kva);
 }
