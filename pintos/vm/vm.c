@@ -6,6 +6,7 @@
 #include "vm/inspect.h"
 #include "threads/thread.h"
 
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void
@@ -90,10 +91,12 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		page->writable = writable;
 		if(spt_insert_page(spt,page) == true)
 			return true;
-		else
+		else {
 			free(page);
 			return false;
+		}
 	}
+	return false;
 }
 
 /* Find VA from spt and return page. On error, return NULL. */
@@ -151,8 +154,17 @@ vm_evict_frame (void) {
  * space.*/
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = NULL;
-	/* TODO: Fill this function. */
+	struct frame *frame = malloc(sizeof(struct frame));
+	if (frame == NULL)
+		PANIC("Out of memory");
+
+	frame->page = NULL;
+	frame->kva = palloc_get_page(PAL_USER | PAL_ZERO);
+
+	if (frame->kva == NULL) {
+		free(frame);
+		PANIC("Out of frames");
+	}
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
@@ -175,8 +187,16 @@ vm_try_handle_fault (struct intr_frame *f, void *addr,
 		bool user, bool write, bool not_present) {
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 	struct page *page = NULL;
-	/* TODO: Validate the fault */
-	/* TODO: Your code goes here */
+
+	if (addr == NULL || is_kernel_vaddr(addr))
+		return false;
+
+	if (!not_present)
+		return false;
+		
+	page = spt_find_page(spt,addr);
+	if (page == NULL)
+		return false;
 
 	return vm_do_claim_page (page);
 }
@@ -193,8 +213,9 @@ vm_dealloc_page (struct page *page) {
 bool
 vm_claim_page (void *va) {
 	struct page *page = NULL;
-	/* TODO: Fill this function */
-
+	page = spt_find_page(&thread_current()->spt,va);
+	if (page == NULL)
+		return false;
 	return vm_do_claim_page (page);
 }
 
@@ -206,8 +227,8 @@ vm_do_claim_page (struct page *page) {
 	/* Set links */
 	frame->page = page;
 	page->frame = frame;
-
-	/* TODO: Insert page table entry to map page's VA to frame's PA. */
+	if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable))
+			return false;
 
 	return swap_in (page, frame->kva);
 }
