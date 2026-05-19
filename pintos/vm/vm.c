@@ -2,7 +2,7 @@
 
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
-#include "threads/mmu.c"
+#include "threads/mmu.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/thread.h"
@@ -121,7 +121,6 @@ spt_insert_page (struct supplemental_page_table *spt,
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
 	vm_dealloc_page (page);
-	return true;
 }
 
 /* Get the struct frame, that will be evicted. */
@@ -149,10 +148,9 @@ vm_evict_frame (void) {
  * space.*/
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = malloc(sizeof (struct *frame));
+	struct frame *frame = malloc(sizeof *frame);
 
 	if(frame == NULL) return NULL;
-	// return 
 	frame->kva = palloc_get_page(PAL_USER | PAL_ZERO);
 	
 	if(frame->kva == NULL) {
@@ -188,8 +186,9 @@ vm_try_handle_fault (struct intr_frame *f, void *addr,
 
 	if(!not_present) return false;
 
-	if(spt_find_page != NULL)
-		page = spt_find_page(spt, addr);
+	page = spt_find_page(spt, addr);
+
+	if(page == NULL) return false;
 
 	if(write && !page->writable) return false;
 	
