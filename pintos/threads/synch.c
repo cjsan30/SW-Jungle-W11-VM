@@ -43,7 +43,7 @@
    thread, if any). */
 
 static bool
-thread_priority_less (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED) 
+thread_priority_less (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 {
 	struct thread *ta = list_entry (a, struct thread, elem);
 	struct thread *tb = list_entry (b, struct thread, elem);
@@ -69,7 +69,7 @@ remove_donation_by_lock (struct lock *lock)
 		struct thread *t = list_entry (e, struct thread, donation_elem);
 
 		if (t->waiting_lock == lock)
-			e = list_remove (e);//삭제된 원소의 다음 원소를 반환
+			e = list_remove (e);
 		else
 			e = list_next (e);
 	}
@@ -337,7 +337,7 @@ struct semaphore_elem {
 };
 
 static bool
-cond_priority_more (const struct list_elem *a, const struct list_elem *b,void *aux UNUSED) 
+cond_priority_more (const struct list_elem *a, const struct list_elem *b,void *aux UNUSED)
 {
 	struct semaphore_elem *sa = list_entry (a, struct semaphore_elem, elem);
 	struct semaphore_elem *sb = list_entry (b, struct semaphore_elem, elem);

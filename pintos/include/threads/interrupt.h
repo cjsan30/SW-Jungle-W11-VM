@@ -26,12 +26,12 @@ struct gp_registers {
 	uint64_t r9;															// argu 5
 	uint64_t r8;															// argu 6
 	uint64_t rsi;															// argu 2
-	uint64_t rdi;															// argu 1 
+	uint64_t rdi;															// argu 1
 	uint64_t rbp;
 	uint64_t rdx;															// argu 3
 	uint64_t rcx;
 	uint64_t rbx;
-	uint64_t rax;															// 반환값 , syscall result
+	uint64_t rax;
 } __attribute__((packed));
 
 struct intr_frame {
@@ -52,12 +52,12 @@ struct intr_frame {
 	uint64_t error_code;
 /* Pushed by the CPU.
    These are the interrupted task's saved registers. */
-	uintptr_t rip;															// 프로그램 시작 주소
+	uintptr_t rip;
 	uint16_t cs;
 	uint16_t __pad5;
 	uint32_t __pad6;
 	uint64_t eflags;
-	uintptr_t rsp;															// 유저 스택 시작 위치 ( Crash )
+	uintptr_t rsp;
 	uint16_t ss;
 	uint16_t __pad7;
 	uint32_t __pad8;
